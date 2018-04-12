@@ -1,0 +1,56 @@
+library(lubridate)
+library(urca)
+library(forecast)
+setwd("D:/Sem 4/Forecasting")
+temp = read.csv("ElectricGas1971.csv")
+full = ts(temp[,2],start=c(1971,1),frequency = 12)
+hold=ts(temp[,2],start=c(1971,1),end=c(2017,6),frequency = 12)
+
+plot(full)
+plot(log(full))
+seasonplot(full)
+seasonplot(log(full))
+
+
+x =diff(diff(log(hold),12))
+y=diff(log(hold),12)
+z=diff(diff(log(hold)),12)
+summary(ur.df(x,type="trend",lags=24, selectlags="AIC"))
+
+acf(x)
+acf(diff(log(hold)),200)
+pacf(diff(log(hold)),100)
+acf(x)
+pacf(x,100)
+mean(diff(log(hold))) #mean very small, hence not including drift
+#models
+Arima(log(hold),order=c(2,0,2),seasonal=c(1,1,1))
+Arima(log(hold),order=c(2,0,1),seasonal=c(2,1,1))
+Arima(log(hold),order=c(2,0,2),seasonal=c(2,1,1))
+Arima(log(hold),order=c(2,0,2),seasonal=c(2,1,2))
+Arima(log(hold),order=c(3,0,2),seasonal=c(2,1,1))
+Arima(log(hold),order=c(3,0,2),seasonal=c(1,1,1))
+Arima(log(hold),order=c(2,0,1),seasonal=c(3,1,1))
+Arima(log(hold),order=c(2,0,2),seasonal=c(3,1,1))
+Arima(log(hold),order=c(5,0,2),seasonal=c(2,1,1))
+Arima(log(hold),order=c(2,0,1),seasonal=c(3,1,2))
+Arima(log(hold),order=c(2,0,2),seasonal=c(3,1,2))
+
+#Forecasting holdout period
+model=Arima(log(hold),order=c(2,0,2),seasonal=c(2,1,1))
+model2=Arima(log(hold),order=c(2,0,1),seasonal=c(2,1,1))
+acf(model$residuals,50)
+acf(model2$residuals,50)
+Box.test(model$residuals,lag=28,type="Ljung-Box")
+foreHold = forecast(model,h=4,lambda=0,biasadj=TRUE)
+upper=ts(foreHold$upper[,2],start=c(2017,7),frequency = 12)
+lower=ts(foreHold$lower[,2],start=c(2017,7),frequency = 12)
+plot(cbind(window(full,start=c(2016,1)),upper,lower,foreHold$mean),ylab="FORECAST",col=c("BLACK","RED","RED","BLUE"),lty=c("solid","dotted","dotted","solid"),plot.type="single")
+accuracy(foreHold,window(full,start=c(2017,7)))
+
+#Forecasting full data
+modelFull=Arima(log(full),order=c(2,0,2),seasonal=c(2,1,1))
+fore = forecast(modelFull,h=4,lambda=0,biasadj=TRUE)
+upper=ts(fore$upper[,2],start=c(2017,11),frequency = 12)
+lower=ts(fore$lower[,2],start=c(2017,11),frequency = 12)
+plot(cbind(window(full,start=c(2016,1)),upper,lower,fore$mean),ylab="FORECAST",col=c("BLACK","RED","RED","BLUE"),lty=c("solid","dotted","dotted","solid"),plot.type="single")
